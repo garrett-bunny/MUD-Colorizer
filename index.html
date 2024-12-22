@@ -108,6 +108,7 @@
         <select id="formatSelector">
           <option value="@x">Xterm: @xNNN</option>
           <option value="{x">Xterm: {xNNN</option>
+          <option value="$x">Xterm: $xNNN</option>
           <option value="@[F">Xterm F-colors: @[FNNN]</option>
           <option value="\t">Xterm Builder F-colors: \t[FNNN]</option>
         </select>
@@ -292,6 +293,8 @@
           return `@x${String(colorIndex).padStart(3, "0")}`;
         } else if (format === "{x") {
           return `{x${String(colorIndex).padStart(3, "0")}`;
+        } else if (format === "$x") {
+          return `$x${String(colorIndex).padStart(3, "0")}`;
         } else if (format === "@[F") {
           let fCode = "F000";
           if (colorIndex >= 16 && colorIndex <= 231) {

@@ -212,8 +212,11 @@
         return xtermToRgbHex(colorIndex);
       }
 
-      const regex =
-        /(\$x\d{3}|@x\d{3}|\{x\d{3}|&\d{3}|\@\[F\d{3}\]|\\t\[F\d{3}\]|@n|\$[kKrRgGyYbBmMcCwWdD]|@[kKrRgGyYbBmMcCwWdD]|\{[kKrRgGyYbBmMcCwWdD])|([^$@{&\\]+)/g;
+// This regex will match any valid color code token in group1,
+// and if not a valid token, it will match any single character (including $, @, {, &)
+// in group2.
+const regex = /(\$x\d{3}|@x\d{3}|\{x\d{3}|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rRgGyYbBmMcCwWdD](?:\d{3})?|@[rRgGyYbBmMcCwWdD](?:\d{3})?|\&[rRgGyYbBmMcCwWdD](?:\d{3})?|\{[rRgGyYbBmMcCwWdD](?:\d{3})?|\{\d{3}|\&\d{3})|([\s\S])/g;
+
 
       function renderXterm(text) {
         let output = "";

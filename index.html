@@ -111,6 +111,7 @@
           <option value="$x">Xterm: $xNNN</option>
           <option value="@[F">Xterm F-colors: @[FNNN]</option>
           <option value="\t">Xterm Builder F-colors: \t[FNNN]</option>
+          <option value="&amp;">Xterm: &amp;NNN</option>
         </select>
       </div>
       <br />
@@ -212,7 +213,7 @@
       }
 
       const regex =
-        /(\$x\d{3}|@x\d{3}|\{x\d{3}|\@\[F\d{3}\]|\\t\[F\d{3}\]|@n|\$[kKrRgGyYbBmMcCwWdD]|@[kKrRgGyYbBmMcCwWdD]|\{[kKrRgGyYbBmMcCwWdD])|([^$@{\\]+)/g;
+        /(\$x\d{3}|@x\d{3}|\{x\d{3}|&\d{3}|\@\[F\d{3}\]|\\t\[F\d{3}\]|@n|\$[kKrRgGyYbBmMcCwWdD]|@[kKrRgGyYbBmMcCwWdD]|\{[kKrRgGyYbBmMcCwWdD])|([^$@{&\\]+)/g;
 
       function renderXterm(text) {
         let output = "";
@@ -232,6 +233,9 @@
             } else if (colorCode.startsWith("@[") && colorCode.endsWith("]")) {
               const inside = colorCode.slice(2, -1);
               currentColor = fToRgbHex(inside);
+            } else if (colorCode.startsWith("&") && colorCode.length == 4) {
+              const idx = parseInt(colorCode.slice(1), 10);
+              currentColor = xtermToRgbHex(idx);
             } else if (
               colorCode.startsWith("\\t[") &&
               colorCode.endsWith("]")
@@ -295,6 +299,8 @@
           return `{x${String(colorIndex).padStart(3, "0")}`;
         } else if (format === "$x") {
           return `$x${String(colorIndex).padStart(3, "0")}`;
+        } else if (format === "&") {
+          return `&${String(colorIndex).padStart(3, "0")}`;
         } else if (format === "@[F") {
           let fCode = "F000";
           if (colorIndex >= 16 && colorIndex <= 231) {
@@ -498,7 +504,7 @@
         if (mode === "edit") {
           // Strip color codes to get plain text
           let plain = text.replace(
-            /\$x\d{3}|@x\d{3}|\{x\d{3}|\@\[F\d{3}\]|\\t\[F\d{3}\]|@n|\$[kKrRgGyYbBmMcCwWdD]|@[kKrRgGyYbBmMcCwWdD]|\{[kKrRgGyYbBmMcCwWdD]/g,
+            /\$x\d{3}|@x\d{3}|\{x\d{3}|&\d{3}|\@\[F\d{3}\]|\\t\[F\d{3}\]|@n|\$[kKrRgGyYbBmMcCwWdD]|@[kKrRgGyYbBmMcCwWdD]|\{[kKrRgGyYbBmMcCwWdD]/g,
             ""
           );
           originalText = plain;

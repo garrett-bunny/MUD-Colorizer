@@ -341,6 +341,84 @@
         return `@x${String(colorIndex).padStart(3, "0")}`;
       }
 
+      // *** ADDED: Convert whatever codes appear in text to the *new* format
+      //    (e.g., $x123 => @[Fxxx], etc.)
+      function convertColorCodesToFormat(text, newFormat) {
+  let converted = "";
+
+  text.replace(regex, (match, colorCode, textContent) => {
+    if (colorCode) {
+      let colorIndex = null;
+
+      if (
+        (colorCode.startsWith("$x") ||
+          colorCode.startsWith("@x") ||
+          colorCode.startsWith("{x")) &&
+        colorCode.length === 5
+      ) {
+        colorIndex = parseInt(colorCode.slice(2), 10);
+      } else if (
+        (colorCode.startsWith("@[F") && colorCode.endsWith("]")) ||
+        (colorCode.startsWith("\\t[F") && colorCode.endsWith("]"))
+      ) {
+        const inside = colorCode.includes("\\t")
+          ? colorCode.slice(3, -1)
+          : colorCode.slice(2, -1);
+        const r = parseInt(inside.charAt(1), 10);
+        const g = parseInt(inside.charAt(2), 10);
+        const b = parseInt(inside.charAt(3), 10);
+        colorIndex = 16 + 36 * r + 6 * g + b;
+      } else if (colorCode === "@n") {
+        colorIndex = 7;
+      } else if (
+        colorCode.match(/^\$[rRgGyYbBmMcCwWdD]$/) ||
+        colorCode.match(/^@[rRgGyYbBmMcCwWdD]$/) ||
+        colorCode.match(/^\{[rRgGyYbBmMcCwWdD]$/)
+      ) {
+        const c = colorCode.charAt(1);
+        colorIndex = standardColorToIndex[c] || 7;
+      } else if (colorCode.startsWith("&")) {
+        const m = colorCode.match(/^&([rRgGyYbBmMcCwWdD])(\d{3})?$/);
+        if (m) {
+          if (m[2]) {
+            colorIndex = parseInt(m[2], 10);
+          } else {
+            const c = m[1];
+            colorIndex = standardColorToIndex[c] || 7;
+          }
+        } else if (/^&\d{3}$/.test(colorCode)) {
+          colorIndex = parseInt(colorCode.slice(1), 10);
+        }
+      } else if (colorCode.startsWith("{")) {
+        if (colorCode.startsWith("{x") && colorCode.length === 5) {
+          colorIndex = parseInt(colorCode.slice(2), 10);
+        } else {
+          const m = colorCode.match(/^\{([rRgGyYbBmMcCwWdD])(\d{3})?$/);
+          if (m) {
+            if (m[2]) {
+              colorIndex = parseInt(m[2], 10);
+            } else {
+              const c = m[1];
+              colorIndex = standardColorToIndex[c] || 7;
+            }
+          } else if (/^\{\d{3}$/.test(colorCode)) {
+            colorIndex = parseInt(colorCode.slice(1), 10);
+          }
+        }
+      } else {
+        colorIndex = 7;
+      }
+
+      converted += wrapColorCode(colorIndex);
+    } else if (textContent) {
+      converted += textContent;
+    }
+  });
+
+  return converted;
+}
+
+
       // Updated to only insert color codes before non-whitespace chars
       function applyOriginalPattern(text, colors) {
         let result = "";

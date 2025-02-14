@@ -580,6 +580,34 @@
         });
       }
 
+      // *** CHANGED: In the old code, we only called `applyGradient()`.
+      //     Now we'll also do a forced color-code conversion so that if we have $x123 codes
+      //     and select F-code, it rewrites them in the text box.
+      document
+        .getElementById("formatSelector")
+        .addEventListener("change", function () {
+          const text = document.getElementById("textInput").value;
+          const newFormat = this.value;
+
+          // Convert codes to the newly selected format:
+          const converted = convertColorCodesToFormat(text, newFormat);
+          document.getElementById("textInput").value = converted;
+
+          // Then, do the normal logic:
+          if (getSelectedMode() === "edit") {
+            // In edit mode, we want to strip color codes to keep originalText "clean",
+            // then re-apply gradient if user has chosen one
+            originalText = converted.replace(
+              /\$x\d{3}|@x\d{3}|\{x\d{3}|\@\[F\d{3}\]|\\t\[F\d{3}\]|@n|\$[kKrRgGyYbBmMcCwWdD]|@[kKrRgGyYbBmMcCwWdD]|\{[kKrRgGyYbBmMcCwWdD]/g,
+              ""
+            );
+            applyGradient();
+          } else {
+            // "viewer mode" => just update the output with the newly converted codes
+            updateOutput();
+          }
+        });
+
       // Gradient definitions (unchanged)
       const gradients = [
         { name: "Rainbow", colors: [196, 208, 226, 46, 51, 87] },

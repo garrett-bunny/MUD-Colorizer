@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- If you're reading this, you might like this tool, but it would be NICE if you could credit me somehow. Demon, Despair, Asmodeus, or Jeff. https://www.github.com/coffee-nerd/   Please leave this line in the code.  -->
+    <!-- If you're reading this, you might like this tool, but it would be NICE if you could credit me somehow. Demon, Despair, Asmodeus, or Jeff. https://www.github.com/coffee-nerd/   Please leave this line in the code. Preferably we can collaborate and you can just make a pull request.  -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>MUD Colorizer</title>
     <style>
@@ -166,6 +166,27 @@
         D: "#333333", // Blackish
       };
 
+      // A helper to map standard color letters (like '$r') to an approximate xterm 0-255 index
+      const standardColorToIndex = {
+        k: 0,   // black
+        K: 8,   // bright black
+        r: 1,   // dark red
+        R: 9,   // bright red
+        g: 2,   // dark green
+        G: 10,  // bright green
+        y: 3,   // dark yellow
+        Y: 11,  // bright yellow
+        b: 4,   // dark blue
+        B: 12,  // bright blue
+        m: 5,   // dark magenta
+        M: 13,  // bright magenta
+        c: 6,   // dark cyan
+        C: 14,  // bright cyan
+        w: 7,   // silver
+        W: 15,  // white
+        D: 8,   // "blackish" -> reuse bright black
+      };
+
       // Converts an Xterm color index (0-255) into an RGB hex color
       function xtermToRgbHex(colorIndex) {
         if (colorIndex < 16) {
@@ -204,6 +225,7 @@
 
       // Updated fToRgbHex for @[FNNN]
       function fToRgbHex(fCode) {
+        // fCode example: "F012" => r=0, g=1, b=2
         const codeStr = fCode.slice(1);
         const r = parseInt(codeStr.charAt(0), 10);
         const g = parseInt(codeStr.charAt(1), 10);
@@ -218,66 +240,88 @@
 const regex = /(\$x\d{3}|@x\d{3}|\{x\d{3}|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rRgGyYbBmMcCwWdD](?:\d{3})?|@[rRgGyYbBmMcCwWdD](?:\d{3})?|\&[rRgGyYbBmMcCwWdD](?:\d{3})?|\{[rRgGyYbBmMcCwWdD](?:\d{3})?|\{\d{3}|\&\d{3})|([\s\S])/g;
 
 
-      function renderXterm(text) {
-        let output = "";
-        let currentColor = "#ffffff";
+function renderXterm(text) {
+  let output = "";
+  let currentColor = "#ffffff";
 
-        text.replace(regex, (match, colorCode, textContent) => {
-          if (colorCode) {
-            // Update currentColor based on the found color code
-            if (
-              (colorCode.startsWith("$x") ||
-                colorCode.startsWith("@x") ||
-                colorCode.startsWith("{x")) &&
-              colorCode.length === 5
-            ) {
-              const idx = parseInt(colorCode.slice(2), 10);
-              currentColor = xtermToRgbHex(idx);
-            } else if (colorCode.startsWith("@[") && colorCode.endsWith("]")) {
-              const inside = colorCode.slice(2, -1);
-              currentColor = fToRgbHex(inside);
-            } else if (colorCode.startsWith("&") && colorCode.length == 4) {
-              const idx = parseInt(colorCode.slice(1), 10);
-              currentColor = xtermToRgbHex(idx);
-            } else if (
-              colorCode.startsWith("\\t[") &&
-              colorCode.endsWith("]")
-            ) {
-              const inside = colorCode.slice(3, -1);
-              currentColor = fToRgbHex(inside);
-            } else if (colorCode.match(/^@n$/)) {
-              // Reset color
-              currentColor = "#ffffff";
-            } else if (colorCode.match(/^\$[kKrRgGyYbBmMcCwWdD]$/)) {
-              const c = colorCode.charAt(1);
-              currentColor = standardColorMap[c] || "#ffffff";
-            } else if (colorCode.match(/^@[kKrRgGyYbBmMcCwWdD]$/)) {
-              const c = colorCode.charAt(1);
-              currentColor = standardColorMap[c] || "#ffffff";
-            } else if (colorCode.match(/^\{[kKrRgGyYbBmMcCwWdD]$/)) {
-              const c = colorCode.charAt(1);
-              currentColor = standardColorMap[c] || "#ffffff";
-            }
-            // No direct output here, just update currentColor
-          } else if (textContent) {
-            // Process each character in textContent
-            for (let i = 0; i < textContent.length; i++) {
-              const char = textContent[i];
-              if (/\s/.test(char)) {
-                // Whitespace character: output as-is (no <span>)
-                output += escapeHtml(char);
-              } else {
-                // Non-whitespace character: apply current color span
-                output += `<span style="color: ${currentColor}">${escapeHtml(
-                  char
-                )}</span>`;
-              }
-            }
+  text.replace(regex, (match, colorCode, textContent) => {
+    if (colorCode) {
+      // Process valid color code tokens
+      if (
+        (colorCode.startsWith("$x") ||
+          colorCode.startsWith("@x") ||
+          colorCode.startsWith("{x")) &&
+        colorCode.length === 5
+      ) {
+        const idx = parseInt(colorCode.slice(2), 10);
+        currentColor = xtermToRgbHex(idx);
+      } else if (colorCode.startsWith("@[") && colorCode.endsWith("]")) {
+        const inside = colorCode.slice(2, -1);
+        currentColor = fToRgbHex(inside);
+      } else if (
+        colorCode.startsWith("\\t[") &&
+        colorCode.endsWith("]")
+      ) {
+        const inside = colorCode.slice(3, -1);
+        currentColor = fToRgbHex(inside);
+      } else if (colorCode.startsWith("&")) {
+        const m = colorCode.match(/^&([rRgGyYbBmMcCwWdD])(\d{3})?$/);
+        if (m) {
+          if (m[2]) {
+            const idx = parseInt(m[2], 10);
+            currentColor = xtermToRgbHex(idx);
+          } else {
+            const c = m[1];
+            currentColor = standardColorMap[c] || "#ffffff";
           }
-        });
-
-        return output;
+        } else if (/^&\d{3}$/.test(colorCode)) {
+          const idx = parseInt(colorCode.slice(1), 10);
+          currentColor = xtermToRgbHex(idx);
+        }
+      } else if (colorCode.startsWith("{")) {
+        if (colorCode.startsWith("{x") && colorCode.length === 5) {
+          const idx = parseInt(colorCode.slice(2), 10);
+          currentColor = xtermToRgbHex(idx);
+        } else {
+          const m = colorCode.match(/^\{([rRgGyYbBmMcCwWdD])(\d{3})?$/);
+          if (m) {
+            if (m[2]) {
+              const idx = parseInt(m[2], 10);
+              currentColor = xtermToRgbHex(idx);
+            } else {
+              const c = m[1];
+              currentColor = standardColorMap[c] || "#ffffff";
+            }
+          } else if (/^\{\d{3}$/.test(colorCode)) {
+            const idx = parseInt(colorCode.slice(1), 10);
+            currentColor = xtermToRgbHex(idx);
+          }
+        }
+      } else if (colorCode === "@n") {
+        currentColor = "#ffffff";
+      } else if (colorCode.match(/^\$[rRgGyYbBmMcCwWdD](?:\d{3})?$/)) {
+        const c = colorCode.charAt(1);
+        currentColor = standardColorMap[c] || "#ffffff";
+      } else if (colorCode.match(/^@[rRgGyYbBmMcCwWdD](?:\d{3})?$/)) {
+        const c = colorCode.charAt(1);
+        currentColor = standardColorMap[c] || "#ffffff";
       }
+      // (Any valid token is consumed here without directly outputting text.)
+    } else if (textContent) {
+      // textContent holds one character (or whitespace) not part of a valid code.
+      if (/\s/.test(textContent)) {
+        output += escapeHtml(textContent);
+      } else {
+        output += `<span style="color: ${currentColor}">${escapeHtml(
+          textContent
+        )}</span>`;
+      }
+    }
+  });
+
+  return output;
+}
+
 
       function escapeHtml(text) {
         const map = {
@@ -292,7 +336,8 @@ const regex = /(\$x\d{3}|@x\d{3}|\{x\d{3}|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rR
         });
       }
 
-      // Return just the color code based on format, without character
+      // Return just the color code string in the currently selected format,
+      // for a given "xterm index" (0-255).
       function wrapColorCode(colorIndex) {
         const format = document.getElementById("formatSelector").value;
 
@@ -313,6 +358,7 @@ const regex = /(\$x\d{3}|@x\d{3}|\{x\d{3}|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rR
             const b = base % 6;
             fCode = `F${r}${g}${b}`;
           } else {
+            // clamp to valid range
             const clamped = Math.min(Math.max(colorIndex, 16), 231);
             const base = clamped - 16;
             const r = Math.floor(base / 36) % 6;
@@ -330,6 +376,7 @@ const regex = /(\$x\d{3}|@x\d{3}|\{x\d{3}|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rR
             const b = base % 6;
             fCode = `F${r}${g}${b}`;
           } else {
+            // clamp to valid range
             const clamped = Math.min(Math.max(colorIndex, 16), 231);
             const base = clamped - 16;
             const r = Math.floor(base / 36) % 6;
@@ -339,7 +386,6 @@ const regex = /(\$x\d{3}|@x\d{3}|\{x\d{3}|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rR
           }
           return `\\t[${fCode}]`;
         }
-
         // Default fallback
         return `@x${String(colorIndex).padStart(3, "0")}`;
       }
@@ -961,9 +1007,6 @@ const regex = /(\$x\d{3}|@x\d{3}|\{x\d{3}|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rR
       document
         .getElementById("patternSelect")
         .addEventListener("change", onPatternChange);
-      document
-        .getElementById("formatSelector")
-        .addEventListener("change", applyGradient);
 
       initialize();
     </script>

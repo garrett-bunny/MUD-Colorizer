@@ -110,6 +110,7 @@
           <option value="{x">Xterm: {xNNN</option>
           <option value="$x">Xterm: $xNNN</option>
           <option value="@[F">Xterm F-colors: @[FNNN]</option>
+          <option value="^[F">Xterm F-colors: ^[FNNN]</option>
           <option value="\t">Xterm Builder F-colors: \t[FNNN]</option>
           <option value="&amp;">Xterm: &amp;NNN</option>
         </select>
@@ -237,7 +238,7 @@
 // This regex will match any valid color code token in group1,
 // and if not a valid token, it will match any single character (including $, @, {, &)
 // in group2.
-const regex = /(\$x\d{3}|@x\d{3}|\{x\d{3}|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rRgGyYbBmMcCwWdD](?:\d{3})?|@[rRgGyYbBmMcCwWdD](?:\d{3})?|\&[rRgGyYbBmMcCwWdD](?:\d{3})?|\{[rRgGyYbBmMcCwWdD](?:\d{3})?|\{\d{3}|\&\d{3})|([\s\S])/g;
+const regex = /(\$x\d{3}|@x\d{3}|\{x\d{3}|\^\[[F]\d{3}\]|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rRgGyYbBmMcCwWdD](?:\d{3})?|@[rRgGyYbBmMcCwWdD](?:\d{3})?|\&[rRgGyYbBmMcCwWdD](?:\d{3})?|\{[rRgGyYbBmMcCwWdD](?:\d{3})?|\{\d{3}|\&\d{3})|([\s\S])/g;
 
 
 function renderXterm(text) {
@@ -256,6 +257,9 @@ function renderXterm(text) {
         const idx = parseInt(colorCode.slice(2), 10);
         currentColor = xtermToRgbHex(idx);
       } else if (colorCode.startsWith("@[") && colorCode.endsWith("]")) {
+        const inside = colorCode.slice(2, -1);
+        currentColor = fToRgbHex(inside);
+      } else if (colorCode.startsWith("^[") && colorCode.endsWith("]")) {
         const inside = colorCode.slice(2, -1);
         currentColor = fToRgbHex(inside);
       } else if (
@@ -367,6 +371,23 @@ function renderXterm(text) {
             fCode = `F${r}${g}${b}`;
           }
           return `@[${fCode}]`;
+        } else if (format === "^[F") {
+          let fCode = "F000";
+          if (colorIndex >= 16 && colorIndex <= 231) {
+            const base = colorIndex - 16;
+            const r = Math.floor(base / 36) % 6;
+            const g = Math.floor(base / 6) % 6;
+            const b = base % 6;
+            fCode = `F${r}${g}${b}`;
+          } else {
+            const clamped = Math.min(Math.max(colorIndex, 16), 231);
+            const base = clamped - 16;
+            const r = Math.floor(base / 36) % 6;
+            const g = Math.floor(base / 6) % 6;
+            const b = base % 6;
+            fCode = `F${r}${g}${b}`;
+          }
+          return `^[${fCode}]`;
         } else if (format === "\\t") {
           let fCode = "F000";
           if (colorIndex >= 16 && colorIndex <= 231) {
@@ -408,7 +429,8 @@ function renderXterm(text) {
         colorIndex = parseInt(colorCode.slice(2), 10);
       } else if (
         (colorCode.startsWith("@[F") && colorCode.endsWith("]")) ||
-        (colorCode.startsWith("\\t[F") && colorCode.endsWith("]"))
+        (colorCode.startsWith("\\t[F") && colorCode.endsWith("]")) ||
+        (colorCode.startsWith("^[F") && colorCode.endsWith("]"))
       ) {
         const inside = colorCode.includes("\\t")
           ? colorCode.slice(3, -1)
@@ -631,7 +653,7 @@ function renderXterm(text) {
         if (mode === "edit") {
           // Remove only valid color code tokens
           let plain = text.replace(
-            /(\$x\d{3}|@x\d{3}|\{x\d{3}|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rRgGyYbBmMcCwWdD](?:\d{3})?|@[rRgGyYbBmMcCwWdD](?:\d{3})?|\&[rRgGyYbBmMcCwWdD](?:\d{3})?|\{[rRgGyYbBmMcCwWdD](?:\d{3})?|\{\d{3}|\&\d{3})/g,
+            /\$x\d{3}|@x\d{3}|\{x\d{3}|\^\[[F]\d{3}\]|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rKrRgGyYbBmMcCwWdD]|@[rKrRgGyYbBmMcCwWdD]|\{[rKrRgGyYbBmMcCwWdD]|\&[rKrRgGyYbBmMcCwWdD](?:\d{3})?|\&\d{3}/g,
             ""
           );
           originalText = plain;
@@ -725,9 +747,9 @@ function renderXterm(text) {
             // In edit mode, we want to strip color codes to keep originalText "clean",
             // then re-apply gradient if user has chosen one
             originalText = converted.replace(
-              /\$x\d{3}|@x\d{3}|\{x\d{3}|@\[F\d{3}\]|\\t\[F\d{3}\]|@n|\$[rKrRgGyYbBmMcCwWdD]|@[rKrRgGyYbBmMcCwWdD]|\{[rKrRgGyYbBmMcCwWdD]|\&[rRgGyYbBmMcCwWdD](?:\d{3})?|\&\d{3}/g,
-              ""
-            );
+            /\$x\d{3}|@x\d{3}|\{x\d{3}|\^\[[F]\d{3}\]|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rKrRgGyYbBmMcCwWdD]|@[rKrRgGyYbBmMcCwWdD]|\{[rKrRgGyYbBmMcCwWdD]|\&[rKrRgGyYbBmMcCwWdD](?:\d{3})?|\&\d{3}/g,
+            ""
+          );
             applyGradient();
           } else {
             // "viewer mode" => just update the output with the newly converted codes

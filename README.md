@@ -1,4 +1,5 @@
 # MUD Colorizer
+![ezgif-7f20c18ef1d344](https://github.com/user-attachments/assets/89e12d22-cd52-49d5-9d6a-27abc1a37aad)
 
 ## Overview
 MUD Colorizer is a simple web-based tool that allows you to apply and visualize MUD color codes in various formats. It provides support for multiple color schemes and allows users to format their text with gradients and predefined color patterns.

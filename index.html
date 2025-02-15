@@ -223,8 +223,15 @@
           return "#ffffff";
         }
       }
-
-      // Updated fToRgbHex for @[FNNN]
+     // So what the hell even are these F colors? (Heh)
+     // "F-colors" are essentially a shorthand notation for specifying colors in the 6×6×6 color cube used by xterm's 256-color palette. 
+     //  Instead of using a direct numeric index (like @x123), an F-color (e.g. @[F123] or ^[F123]) breaks the color into three digits—
+     //  each representing a value (0–5) for red, green, and blue respectively. The conversion function then maps these digits into the 
+     //  appropriate xterm color index (from 16 to 231).
+     //  In short, while they ultimately refer to colors in the xterm palette, the notation is different. They may appear to differ because:
+     //  Xterm codes typically use a numeric index or direct hex representation.
+     //  F-colors encode the red, green, and blue components as three digits, which are then converted into the xterm index.
+     //  This extra layer of abstraction can make them seem different even though they're designed to represent the same range of colors.
       function fToRgbHex(fCode) {
         // fCode example: "F012" => r=0, g=1, b=2
         const codeStr = fCode.slice(1);

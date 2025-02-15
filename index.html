@@ -128,6 +128,9 @@
           <label for="gradientSelect">Select Gradient:</label>
           <select id="gradientSelect"></select>
           <span class="preview-box" id="gradientPreview"></span>
+          &nbsp;&nbsp;
+          <input type="checkbox" id="invertGradient" />
+          <label for="invertGradient">Invert</label>
         </div>
         <br />
 
@@ -140,6 +143,7 @@
             <option value="symmetrical">Symmetrical</option>
           </select>
         </div>
+
       </div>
     </div>
 
@@ -585,10 +589,11 @@ function renderXterm(text) {
         const text = originalText;
         const pattern = document.getElementById("patternSelect").value;
         const select = document.getElementById("gradientSelect");
+        const invert = document.getElementById("invertGradient").checked;
         const index = select.selectedIndex;
         if (index < 0) return;
         const gradient = gradients[index];
-        const colors = gradient.colors;
+        const colors = invert ? gradient.colors.slice().reverse() : gradient.colors;
 
         let gradientText = "";
         if (pattern === "original") {
@@ -1035,6 +1040,9 @@ function renderXterm(text) {
         .addEventListener("change", onGradientChange);
       document
         .getElementById("patternSelect")
+        .addEventListener("change", onPatternChange);
+      document
+        .getElementById("invertGradient")
         .addEventListener("change", onPatternChange);
 
       initialize();

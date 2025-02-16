@@ -626,7 +626,9 @@ function renderXterm(text) {
         const gradient = gradients[index];
         const preview = document.getElementById("gradientPreview");
         if (gradient.colors.length > 1) {
-          preview.style.background = `linear-gradient(to right, ${gradient.colors
+          const invert = document.getElementById("invertGradient").checked;
+          const colors = invert ? gradient.colors.slice().reverse() : gradient.colors;
+          preview.style.background = `linear-gradient(to right, ${colors
             .map(xtermToRgbHex)
             .join(", ")})`;
         } else if (gradient.colors.length === 1) {
@@ -654,6 +656,11 @@ function renderXterm(text) {
       }
 
       function onPatternChange() {
+        applyGradient();
+      }
+
+      function onInvertGradientChange() {
+        updateGradientPreview();
         applyGradient();
       }
 
@@ -1043,7 +1050,7 @@ function renderXterm(text) {
         .addEventListener("change", onPatternChange);
       document
         .getElementById("invertGradient")
-        .addEventListener("change", onPatternChange);
+        .addEventListener("change", onInvertGradientChange);
 
       initialize();
     </script>

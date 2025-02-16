@@ -659,11 +659,6 @@ function renderXterm(text) {
         applyGradient();
       }
 
-      function onInvertGradientChange() {
-        updateGradientPreview();
-        applyGradient();
-      }
-
       let originalText = "";
 
       function onTextInput() {
@@ -1050,7 +1045,7 @@ function renderXterm(text) {
         .addEventListener("change", onPatternChange);
       document
         .getElementById("invertGradient")
-        .addEventListener("change", onInvertGradientChange);
+        .addEventListener("change", onGradientChange);
 
       initialize();
     </script>

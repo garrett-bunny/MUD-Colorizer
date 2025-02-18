@@ -145,7 +145,7 @@
             <input type="text" id="newGradientName" placeholder="My Gradient" required pattern="\w+"/>
             &nbsp;|&nbsp;
             <label for="newGradientCodes">Color Codes</label>
-            <input type="text" id="newGradientCodes" placeholder="120 16 220 161" required pattern="^(?:[0-9]{1,3}\s{0,1})*$" />
+            <input type="text" id="newGradientCodes" placeholder="120 16 220 161" required pattern="^(?:[0-9]{1,3}(?!\S)\s{0,1})+$" />
             <input type="button" id="newGradientProcess" value="Add" />
           </div>
         </div>

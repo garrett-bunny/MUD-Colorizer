@@ -2,7 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- If you're reading this, you might like this tool, but it would be NICE if you could credit me somehow. Demon, Despair, Asmodeus, or Jeff. https://www.github.com/coffee-nerd/   Please leave this line in the code. Preferably we can collaborate and you can just make a pull request.  -->
+    <!-- If you're reading this, you might like this tool, but it would be NICE if you could credit me somehow.
+         Demon, Despair, Asmodeus, or Jeff. https://www.github.com/coffee-nerd/
+         Please leave this line in the code. Preferably we can collaborate and you can just make a pull request. -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>MUD Colorizer</title>
     <style>
@@ -65,8 +67,70 @@
         opacity: 0.5;
         pointer-events: none;
       }
-      input:invalid {
-        background-color: lightpink;
+      /* Custom Gradient Inputs */
+      .custom-gradient-input {
+        background-color: #111;
+        color: white;
+        border: 1px solid #444;
+        padding: 5px;
+        font-family: inherit;
+      }
+      /* Toggle buttons styling */
+      #toggleCustomGradientButton,
+      #toggleManageCustomGradients {
+        background-color: #111;
+        color: white;
+        border: 1px solid #444;
+        padding: 5px 10px;
+        font-family: inherit;
+        cursor: pointer;
+        margin-bottom: 10px;
+      }
+      /* Shake animation */
+      @keyframes shake {
+        0% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        50% { transform: translateX(5px); }
+        75% { transform: translateX(-5px); }
+        100% { transform: translateX(0); }
+      }
+      .shake {
+        animation: shake 0.3s;
+      }
+      .invalid {
+        border: 2px solid red !important;
+      }
+      /* Manage Custom Gradients section */
+      #manageCustomGradients {
+        display: none;
+        border: 1px solid #444;
+        padding: 10px;
+        margin-top: 10px;
+      }
+      #manageCustomGradients h3 {
+        margin-top: 0;
+      }
+      /* Inline help text */
+      .help-text {
+        font-size: 0.8rem;
+        color: #888;
+      }
+      /* Styling for each editable custom gradient item */
+      .custom-gradient-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+        border-bottom: 1px solid #444;
+        padding-bottom: 5px;
+      }
+      .custom-gradient-item input[type="text"] {
+        margin-right: 10px;
+      }
+      .custom-gradient-preview {
+        width: 80px;
+        height: 20px;
+        border: 1px solid #444;
+        margin-right: 10px;
       }
     </style>
   </head>
@@ -92,8 +156,8 @@
       <div>
         <label for="fontSelector">Select Font:</label>
         <select id="fontSelector">
+          <option value="'Fira Code', monospace" selected>Fira Code</option>
           <option value="'Courier New', monospace">Courier New</option>
-          <option value="'Fira Code', monospace">Fira Code</option>
           <option value="'Hack', monospace">Hack</option>
           <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
           <option value="'Roboto Mono', monospace">Roboto Mono</option>
@@ -138,17 +202,55 @@
         </div>
         <br />
 
-        <!-- Add New Gradients -->
-        <div id="addGradient">
+        <!-- Toggle button for Custom Gradient -->
+        <div>
+          <input type="button" id="toggleCustomGradientButton" value="Create custom gradient" />
+        </div>
+        <br />
+
+        <!-- Add New Gradients (hidden by default) -->
+        <div id="addGradient" style="display: none;">
           <div>
             <label>Add New Gradient:</label>
             <label for="newGradientName">Name</label>
-            <input type="text" id="newGradientName" placeholder="My Gradient" required pattern="\w+"/>
+            <input
+              type="text"
+              id="newGradientName"
+              placeholder="My Gradient"
+              required
+              pattern="^[\w\s]+$"
+              title="Enter a name (letters, numbers, and spaces only)"
+              class="custom-gradient-input"
+            />
+            <small class="help-text">Allowed: letters, numbers, spaces</small>
             &nbsp;|&nbsp;
             <label for="newGradientCodes">Color Codes</label>
-            <input type="text" id="newGradientCodes" placeholder="120 16 220 161" required pattern="^(?:[0-9]{1,3}(?!\S)\s{0,1})+$" />
+            <input
+              type="text"
+              id="newGradientCodes"
+              placeholder="120 16 220 161"
+              required
+              pattern="^(?:[0-9]{1,3}(?:\s+[0-9]{1,3})*)$"
+              title="Enter space-separated numbers between 0 and 255"
+              class="custom-gradient-input"
+            />
+            <small class="help-text">E.g.: 54 55 56 57</small>
+            <span class="preview-box" id="customGradientPreview"></span>
             <input type="button" id="newGradientProcess" value="Add" />
           </div>
+        </div>
+        <br />
+
+        <!-- Toggle button for managing custom gradients -->
+        <div>
+          <input type="button" id="toggleManageCustomGradients" value="Manage custom gradients" />
+        </div>
+        <br />
+
+        <!-- Manage Custom Gradients Section -->
+        <div id="manageCustomGradients">
+          <h3>Custom Gradients</h3>
+          <div id="customGradientsList"></div>
         </div>
         <br />
 
@@ -161,7 +263,6 @@
             <option value="symmetrical">Symmetrical</option>
           </select>
         </div>
-
       </div>
     </div>
 
@@ -189,28 +290,28 @@
         D: "#333333", // Blackish
       };
 
-      // A helper to map standard color letters (like '$r') to an approximate xterm 0-255 index
+      // Map standard color letters to an xterm index
       const standardColorToIndex = {
-        k: 0,   // black
-        K: 8,   // bright black
-        r: 1,   // dark red
-        R: 9,   // bright red
-        g: 2,   // dark green
-        G: 10,  // bright green
-        y: 3,   // dark yellow
-        Y: 11,  // bright yellow
-        b: 4,   // dark blue
-        B: 12,  // bright blue
-        m: 5,   // dark magenta
-        M: 13,  // bright magenta
-        c: 6,   // dark cyan
-        C: 14,  // bright cyan
-        w: 7,   // silver
-        W: 15,  // white
-        D: 8,   // "blackish" -> reuse bright black
+        k: 0,
+        K: 8,
+        r: 1,
+        R: 9,
+        g: 2,
+        G: 10,
+        y: 3,
+        Y: 11,
+        b: 4,
+        B: 12,
+        m: 5,
+        M: 13,
+        c: 6,
+        C: 14,
+        w: 7,
+        W: 15,
+        D: 8,
       };
 
-      // Converts an Xterm color index (0-255) into an RGB hex color
+      // Convert an Xterm color index (0-255) into an RGB hex color
       function xtermToRgbHex(colorIndex) {
         if (colorIndex < 16) {
           const standardColors = [
@@ -264,97 +365,89 @@
         return xtermToRgbHex(colorIndex);
       }
 
-// This regex will match any valid color code token in group1,
-// and if not a valid token, it will match any single character (including $, @, {, &)
-// in group2.
-const regex = /(\$x\d{3}|@x\d{3}|\{x\d{3}|\^\[[F]\d{3}\]|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rRgGyYbBmMcCwWdD](?:\d{3})?|@[rRgGyYbBmMcCwWdD](?:\d{3})?|\&[rRgGyYbBmMcCwWdD](?:\d{3})?|\{[rRgGyYbBmMcCwWdD](?:\d{3})?|\{\d{3}|\&\d{3})|([\s\S])/g;
+      // This regex will match any valid color code token in group1,
+      // and if not a valid token, it will match any single character (including $, @, {, &)
+      // in group2.
+      const regex = /(\$x\d{3}|@x\d{3}|\{x\d{3}|\^\[[F]\d{3}\]|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rRgGyYbBmMcCwWdD](?:\d{3})?|@[rRgGyYbBmMcCwWdD](?:\d{3})?|\&[rRgGyYbBmMcCwWdD](?:\d{3})?|\{[rRgGyYbBmMcCwWdD](?:\d{3})?|\{\d{3}|\&\d{3})|([\s\S])/g;
 
+      function renderXterm(text) {
+        let output = "";
+        let currentColor = "#ffffff";
 
-function renderXterm(text) {
-  let output = "";
-  let currentColor = "#ffffff";
-
-  text.replace(regex, (match, colorCode, textContent) => {
-    if (colorCode) {
-      // Process valid color code tokens
-      if (
-        (colorCode.startsWith("$x") ||
-          colorCode.startsWith("@x") ||
-          colorCode.startsWith("{x")) &&
-        colorCode.length === 5
-      ) {
-        const idx = parseInt(colorCode.slice(2), 10);
-        currentColor = xtermToRgbHex(idx);
-      } else if (colorCode.startsWith("@[") && colorCode.endsWith("]")) {
-        const inside = colorCode.slice(2, -1);
-        currentColor = fToRgbHex(inside);
-      } else if (colorCode.startsWith("^[") && colorCode.endsWith("]")) {
-        const inside = colorCode.slice(2, -1);
-        currentColor = fToRgbHex(inside);
-      } else if (
-        colorCode.startsWith("\\t[") &&
-        colorCode.endsWith("]")
-      ) {
-        const inside = colorCode.slice(3, -1);
-        currentColor = fToRgbHex(inside);
-      } else if (colorCode.startsWith("&")) {
-        const m = colorCode.match(/^&([rRgGyYbBmMcCwWdD])(\d{3})?$/);
-        if (m) {
-          if (m[2]) {
-            const idx = parseInt(m[2], 10);
-            currentColor = xtermToRgbHex(idx);
-          } else {
-            const c = m[1];
-            currentColor = standardColorMap[c] || "#ffffff";
-          }
-        } else if (/^&\d{3}$/.test(colorCode)) {
-          const idx = parseInt(colorCode.slice(1), 10);
-          currentColor = xtermToRgbHex(idx);
-        }
-      } else if (colorCode.startsWith("{")) {
-        if (colorCode.startsWith("{x") && colorCode.length === 5) {
-          const idx = parseInt(colorCode.slice(2), 10);
-          currentColor = xtermToRgbHex(idx);
-        } else {
-          const m = colorCode.match(/^\{([rRgGyYbBmMcCwWdD])(\d{3})?$/);
-          if (m) {
-            if (m[2]) {
-              const idx = parseInt(m[2], 10);
+        text.replace(regex, (match, colorCode, textContent) => {
+          if (colorCode) {
+            if (
+              (colorCode.startsWith("$x") ||
+                colorCode.startsWith("@x") ||
+                colorCode.startsWith("{x")) &&
+              colorCode.length === 5
+            ) {
+              const idx = parseInt(colorCode.slice(2), 10);
               currentColor = xtermToRgbHex(idx);
-            } else {
-              const c = m[1];
+            } else if (colorCode.startsWith("@[") && colorCode.endsWith("]")) {
+              const inside = colorCode.slice(2, -1);
+              currentColor = fToRgbHex(inside);
+            } else if (colorCode.startsWith("^[") && colorCode.endsWith("]")) {
+              const inside = colorCode.slice(2, -1);
+              currentColor = fToRgbHex(inside);
+            } else if (
+              colorCode.startsWith("\\t[") &&
+              colorCode.endsWith("]")
+            ) {
+              const inside = colorCode.slice(3, -1);
+              currentColor = fToRgbHex(inside);
+            } else if (colorCode.startsWith("&")) {
+              const m = colorCode.match(/^&([rRgGyYbBmMcCwWdD])(\d{3})?$/);
+              if (m) {
+                if (m[2]) {
+                  const idx = parseInt(m[2], 10);
+                  currentColor = xtermToRgbHex(idx);
+                } else {
+                  const c = m[1];
+                  currentColor = standardColorMap[c] || "#ffffff";
+                }
+              } else if (/^&\d{3}$/.test(colorCode)) {
+                const idx = parseInt(colorCode.slice(1), 10);
+                currentColor = xtermToRgbHex(idx);
+              }
+            } else if (colorCode.startsWith("{")) {
+              if (colorCode.startsWith("{x") && colorCode.length === 5) {
+                const idx = parseInt(colorCode.slice(2), 10);
+                currentColor = xtermToRgbHex(idx);
+              } else {
+                const m = colorCode.match(/^\{([rRgGyYbBmMcCwWdD])(\d{3})?$/);
+                if (m) {
+                  if (m[2]) {
+                    const idx = parseInt(m[2], 10);
+                    currentColor = xtermToRgbHex(idx);
+                  } else {
+                    const c = m[1];
+                    currentColor = standardColorMap[c] || "#ffffff";
+                  }
+                } else if (/^\{\d{3}$/.test(colorCode)) {
+                  const idx = parseInt(colorCode.slice(1), 10);
+                  currentColor = xtermToRgbHex(idx);
+                }
+              }
+            } else if (colorCode === "@n") {
+              currentColor = "#ffffff";
+            } else if (colorCode.match(/^\$[rRgGyYbBmMcCwWdD](?:\d{3})?$/)) {
+              const c = colorCode.charAt(1);
+              currentColor = standardColorMap[c] || "#ffffff";
+            } else if (colorCode.match(/^@[rRgGyYbBmMcCwWdD](?:\d{3})?$/)) {
+              const c = colorCode.charAt(1);
               currentColor = standardColorMap[c] || "#ffffff";
             }
-          } else if (/^\{\d{3}$/.test(colorCode)) {
-            const idx = parseInt(colorCode.slice(1), 10);
-            currentColor = xtermToRgbHex(idx);
+          } else if (textContent) {
+            if (/\s/.test(textContent)) {
+              output += escapeHtml(textContent);
+            } else {
+              output += `<span style="color: ${currentColor}">${escapeHtml(textContent)}</span>`;
+            }
           }
-        }
-      } else if (colorCode === "@n") {
-        currentColor = "#ffffff";
-      } else if (colorCode.match(/^\$[rRgGyYbBmMcCwWdD](?:\d{3})?$/)) {
-        const c = colorCode.charAt(1);
-        currentColor = standardColorMap[c] || "#ffffff";
-      } else if (colorCode.match(/^@[rRgGyYbBmMcCwWdD](?:\d{3})?$/)) {
-        const c = colorCode.charAt(1);
-        currentColor = standardColorMap[c] || "#ffffff";
+        });
+        return output;
       }
-      // (Any valid token is consumed here without directly outputting text.)
-    } else if (textContent) {
-      // textContent holds one character (or whitespace) not part of a valid code.
-      if (/\s/.test(textContent)) {
-        output += escapeHtml(textContent);
-      } else {
-        output += `<span style="color: ${currentColor}">${escapeHtml(
-          textContent
-        )}</span>`;
-      }
-    }
-  });
-
-  return output;
-}
-
 
       function escapeHtml(text) {
         const map = {
@@ -369,11 +462,8 @@ function renderXterm(text) {
         });
       }
 
-      // Return just the color code string in the currently selected format,
-      // for a given "xterm index" (0-255).
       function wrapColorCode(colorIndex) {
         const format = document.getElementById("formatSelector").value;
-
         if (format === "@x") {
           return `@x${String(colorIndex).padStart(3, "0")}`;
         } else if (format === "{x") {
@@ -391,7 +481,6 @@ function renderXterm(text) {
             const b = base % 6;
             fCode = `F${r}${g}${b}`;
           } else {
-            // clamp to valid range
             const clamped = Math.min(Math.max(colorIndex, 16), 231);
             const base = clamped - 16;
             const r = Math.floor(base / 36) % 6;
@@ -426,7 +515,6 @@ function renderXterm(text) {
             const b = base % 6;
             fCode = `F${r}${g}${b}`;
           } else {
-            // clamp to valid range
             const clamped = Math.min(Math.max(colorIndex, 16), 231);
             const base = clamped - 16;
             const r = Math.floor(base / 36) % 6;
@@ -436,117 +524,102 @@ function renderXterm(text) {
           }
           return `\\t[${fCode}]`;
         }
-        // Default fallback
         return `@x${String(colorIndex).padStart(3, "0")}`;
       }
 
-      // *** ADDED: Convert whatever codes appear in text to the *new* format
-      //    (e.g., $x123 => @[Fxxx], etc.)
       function convertColorCodesToFormat(text, newFormat) {
-  let converted = "";
-
-  text.replace(regex, (match, colorCode, textContent) => {
-    if (colorCode) {
-      let colorIndex = null;
-
-      if (
-        (colorCode.startsWith("$x") ||
-          colorCode.startsWith("@x") ||
-          colorCode.startsWith("{x")) &&
-        colorCode.length === 5
-      ) {
-        colorIndex = parseInt(colorCode.slice(2), 10);
-      } else if (
-        (colorCode.startsWith("@[F") && colorCode.endsWith("]")) ||
-        (colorCode.startsWith("\\t[F") && colorCode.endsWith("]")) ||
-        (colorCode.startsWith("^[F") && colorCode.endsWith("]"))
-      ) {
-        const inside = colorCode.includes("\\t")
-          ? colorCode.slice(3, -1)
-          : colorCode.slice(2, -1);
-        const r = parseInt(inside.charAt(1), 10);
-        const g = parseInt(inside.charAt(2), 10);
-        const b = parseInt(inside.charAt(3), 10);
-        colorIndex = 16 + 36 * r + 6 * g + b;
-      } else if (colorCode === "@n") {
-        colorIndex = 7;
-      } else if (
-        colorCode.match(/^\$[rRgGyYbBmMcCwWdD]$/) ||
-        colorCode.match(/^@[rRgGyYbBmMcCwWdD]$/) ||
-        colorCode.match(/^\{[rRgGyYbBmMcCwWdD]$/)
-      ) {
-        const c = colorCode.charAt(1);
-        colorIndex = standardColorToIndex[c] || 7;
-      } else if (colorCode.startsWith("&")) {
-        const m = colorCode.match(/^&([rRgGyYbBmMcCwWdD])(\d{3})?$/);
-        if (m) {
-          if (m[2]) {
-            colorIndex = parseInt(m[2], 10);
-          } else {
-            const c = m[1];
-            colorIndex = standardColorToIndex[c] || 7;
-          }
-        } else if (/^&\d{3}$/.test(colorCode)) {
-          colorIndex = parseInt(colorCode.slice(1), 10);
-        }
-      } else if (colorCode.startsWith("{")) {
-        if (colorCode.startsWith("{x") && colorCode.length === 5) {
-          colorIndex = parseInt(colorCode.slice(2), 10);
-        } else {
-          const m = colorCode.match(/^\{([rRgGyYbBmMcCwWdD])(\d{3})?$/);
-          if (m) {
-            if (m[2]) {
-              colorIndex = parseInt(m[2], 10);
-            } else {
-              const c = m[1];
+        let converted = "";
+        text.replace(regex, (match, colorCode, textContent) => {
+          if (colorCode) {
+            let colorIndex = null;
+            if (
+              (colorCode.startsWith("$x") ||
+                colorCode.startsWith("@x") ||
+                colorCode.startsWith("{x")) &&
+              colorCode.length === 5
+            ) {
+              colorIndex = parseInt(colorCode.slice(2), 10);
+            } else if (
+              (colorCode.startsWith("@[F") && colorCode.endsWith("]")) ||
+              (colorCode.startsWith("\\t[F") && colorCode.endsWith("]")) ||
+              (colorCode.startsWith("^[F") && colorCode.endsWith("]"))
+            ) {
+              const inside = colorCode.includes("\\t")
+                ? colorCode.slice(3, -1)
+                : colorCode.slice(2, -1);
+              const r = parseInt(inside.charAt(1), 10);
+              const g = parseInt(inside.charAt(2), 10);
+              const b = parseInt(inside.charAt(3), 10);
+              colorIndex = 16 + 36 * r + 6 * g + b;
+            } else if (colorCode === "@n") {
+              colorIndex = 7;
+            } else if (
+              colorCode.match(/^\$[rRgGyYbBmMcCwWdD]$/) ||
+              colorCode.match(/^@[rRgGyYbBmMcCwWdD]$/) ||
+              colorCode.match(/^\{[rRgGyYbBmMcCwWdD]$/)
+            ) {
+              const c = colorCode.charAt(1);
               colorIndex = standardColorToIndex[c] || 7;
+            } else if (colorCode.startsWith("&")) {
+              const m = colorCode.match(/^&([rRgGyYbBmMcCwWdD])(\d{3})?$/);
+              if (m) {
+                if (m[2]) {
+                  colorIndex = parseInt(m[2], 10);
+                } else {
+                  const c = m[1];
+                  colorIndex = standardColorToIndex[c] || 7;
+                }
+              } else if (/^&\d{3}$/.test(colorCode)) {
+                colorIndex = parseInt(colorCode.slice(1), 10);
+              }
+            } else if (colorCode.startsWith("{")) {
+              if (colorCode.startsWith("{x") && colorCode.length === 5) {
+                colorIndex = parseInt(colorCode.slice(2), 10);
+              } else {
+                const m = colorCode.match(/^\{([rRgGyYbBmMcCwWdD])(\d{3})?$/);
+                if (m) {
+                  if (m[2]) {
+                    colorIndex = parseInt(m[2], 10);
+                  } else {
+                    const c = m[1];
+                    colorIndex = standardColorToIndex[c] || 7;
+                  }
+                } else if (/^\{\d{3}$/.test(colorCode)) {
+                  colorIndex = parseInt(colorCode.slice(1), 10);
+                }
+              }
+            } else {
+              colorIndex = 7;
             }
-          } else if (/^\{\d{3}$/.test(colorCode)) {
-            colorIndex = parseInt(colorCode.slice(1), 10);
+            converted += wrapColorCode(colorIndex);
+          } else if (textContent) {
+            converted += textContent;
           }
-        }
-      } else {
-        colorIndex = 7;
+        });
+        return converted;
       }
 
-      converted += wrapColorCode(colorIndex);
-    } else if (textContent) {
-      converted += textContent;
-    }
-  });
-
-  return converted;
-}
-
-
-      // Updated to only insert color codes before non-whitespace chars
       function applyOriginalPattern(text, colors) {
         let result = "";
         let lastColorIndex = null;
         for (let i = 0; i < text.length; i++) {
           const char = text[i];
           const colorIndex = colors[i % colors.length];
-
-          // Insert a new color code only if char is not whitespace and color changed
           if (!/\s/.test(char) && colorIndex !== lastColorIndex) {
             result += wrapColorCode(colorIndex);
             lastColorIndex = colorIndex;
           }
-
           result += char;
         }
         return result;
       }
 
-      // Updated to only insert color codes before non-whitespace chars
       function distributeColorsEvenly(text, colors) {
         const n = text.length;
         const c = colors.length;
         if (n === 0) return "";
-
         const baseSize = Math.floor(n / c);
         let remainder = n % c;
-
         let segments = [];
         let startIndex = 0;
         for (let i = 0; i < c; i++) {
@@ -556,7 +629,6 @@ function renderXterm(text) {
           startIndex += segmentSize;
           segments.push({ segment, colorIndex: colors[i] });
         }
-
         let result = "";
         segments.forEach(({ segment, colorIndex }) => {
           if (!segment) return;
@@ -570,17 +642,14 @@ function renderXterm(text) {
             result += char;
           }
         });
-
         return result;
       }
 
-      // Updated to only insert color codes before non-whitespace chars
       function applySymmetricalPattern(text, colors) {
         const c = colors.length;
         if (c < 2) {
           return applyOriginalPattern(text, colors);
         }
-
         let result = "";
         let lastColorIndex = null;
         const cycleLength = 2 * c - 2;
@@ -590,16 +659,13 @@ function renderXterm(text) {
             mod = cycleLength - mod;
           }
           const colorIndex = colors[mod];
-
           const char = text[i];
           if (!/\s/.test(char) && colorIndex !== lastColorIndex) {
             result += wrapColorCode(colorIndex);
             lastColorIndex = colorIndex;
           }
-
           result += char;
         }
-
         return result;
       }
 
@@ -612,7 +678,6 @@ function renderXterm(text) {
         if (index < 0) return;
         const gradient = gradients[index];
         const colors = invert ? gradient.colors.slice().reverse() : gradient.colors;
-
         let gradientText = "";
         if (pattern === "original") {
           gradientText = applyOriginalPattern(text, colors);
@@ -621,7 +686,6 @@ function renderXterm(text) {
         } else if (pattern === "symmetrical") {
           gradientText = applySymmetricalPattern(text, colors);
         }
-
         document.getElementById("textInput").value = gradientText;
         originalText = text;
         updateOutput();
@@ -656,70 +720,6 @@ function renderXterm(text) {
         }
       }
 
-      function populateGradientSelect() {
-        const select = document.getElementById("gradientSelect");
-        gradients.forEach((g, idx) => {
-          const option = document.createElement("option");
-          option.value = g.name;
-          option.textContent = g.name;
-          option.dataset.gradientIndex = idx;
-          select.appendChild(option);
-        });
-        createGradientOptionPreviews();
-      }
-
-      function onGradientChange() {
-        updateGradientPreview();
-        applyGradient();
-      }
-
-      function onPatternChange() {
-        applyGradient();
-      }
-
-      let originalText = "";
-
-      function onTextInput() {
-        const mode = getSelectedMode();
-        const text = document.getElementById("textInput").value;
-        if (mode === "edit") {
-          // Remove only valid color code tokens
-          let plain = text.replace(
-            /\$x\d{3}|@x\d{3}|\{x\d{3}|\^\[[F]\d{3}\]|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rKrRgGyYbBmMcCwWdD]|@[rKrRgGyYbBmMcCwWdD]|\{[rKrRgGyYbBmMcCwWdD]|\&[rKrRgGyYbBmMcCwWdD](?:\d{3})?|\&\d{3}/g,
-            ""
-          );
-          originalText = plain;
-          applyGradient();
-        } else {
-          updateOutput();
-        }
-      }
-
-      function getSelectedMode() {
-        const modes = document.getElementsByName("mode");
-        for (const mode of modes) {
-          if (mode.checked) return mode.value;
-        }
-        return "edit";
-      }
-
-      const modeSelectors = document.getElementsByName("mode");
-      modeSelectors.forEach((modeSelector) => {
-        modeSelector.addEventListener("change", () => {
-          const mode = getSelectedMode();
-          if (mode === "view") {
-            document
-              .getElementById("gradientControls")
-              .classList.add("disabled");
-          } else {
-            document
-              .getElementById("gradientControls")
-              .classList.remove("disabled");
-          }
-          updateOutput();
-        });
-      });
-
       function createGradientOptionPreviews() {
         const select = document.getElementById("gradientSelect");
         Array.from(select.options).forEach((option, index) => {
@@ -728,19 +728,10 @@ function renderXterm(text) {
           gradientCanvas.width = 100;
           gradientCanvas.height = 20;
           const ctx = gradientCanvas.getContext("2d");
-
           if (gradient.colors.length > 1) {
-            const gradientStyle = ctx.createLinearGradient(
-              0,
-              0,
-              gradientCanvas.width,
-              0
-            );
+            const gradientStyle = ctx.createLinearGradient(0, 0, gradientCanvas.width, 0);
             gradient.colors.forEach((color, idx) => {
-              const stopPosition =
-                gradient.colors.length > 1
-                  ? idx / (gradient.colors.length - 1)
-                  : 0;
+              const stopPosition = gradient.colors.length > 1 ? idx / (gradient.colors.length - 1) : 0;
               gradientStyle.addColorStop(stopPosition, xtermToRgbHex(color));
             });
             ctx.fillStyle = gradientStyle;
@@ -752,7 +743,6 @@ function renderXterm(text) {
             ctx.fillStyle = "#000000";
             ctx.fillRect(0, 0, gradientCanvas.width, gradientCanvas.height);
           }
-
           const dataURL = gradientCanvas.toDataURL();
           option.style.backgroundImage = `url(${dataURL})`;
           option.style.backgroundSize = "cover";
@@ -761,81 +751,25 @@ function renderXterm(text) {
         });
       }
 
-      // This function adds the gradient and verifies valid color codes.
-      function verifyAndAddGradient() {
-        const gName = document.getElementById("newGradientName").value;
-        const gColors = [];
-        const colorCodes = document.getElementById("newGradientCodes").value.split(" ");
-        
-        const wasConverted = colorCodes.every((item) => {
-          const conversion = parseInt(item);
-          if (!isNaN(conversion) && conversion >= 0 && conversion <= 255) {
-            gColors.push(conversion);
-            return true;
-          } else {
-            return false;
+      // --- Persistence using localStorage ---
+      function loadCustomGradients() {
+        const stored = localStorage.getItem("customGradients");
+        if (stored) {
+          try {
+            return JSON.parse(stored);
+          } catch (e) {
+            return [];
           }
-        })
-
-        if (wasConverted) {
-          const newIndex = gradients.push({
-              "name": gName,
-              "colors": gColors
-          }) - 1;
-
-          const option = document.createElement("option");
-          option.value = gName;
-          option.textContent = gName;
-          option.dataset.gradientIndex = newIndex;
-
-          document.getElementById("gradientSelect").appendChild(option);
-
-          createGradientOptionPreviews();
-
-          document.getElementById("newGradientName").value = "";
-          document.getElementById("newGradientCodes").value = "";
-        } else {
-          alert("Color codes must be a space separated list of numbers between 0 and 255.");
         }
+        return [];
       }
 
-      // Ignore the click if the input isn't valid
-      function addGradientClick() {
-        if (document.getElementById("newGradientName").validity.valid && document.getElementById("newGradientCodes").validity.valid) {
-          verifyAndAddGradient();
-        }
+      function saveCustomGradients() {
+        localStorage.setItem("customGradients", JSON.stringify(customGradients));
       }
 
-      // *** CHANGED: In the old code, we only called `applyGradient()`.
-      //     Now we'll also do a forced color-code conversion so that if we have $x123 codes
-      //     and select F-code, it rewrites them in the text box.
-      document
-        .getElementById("formatSelector")
-        .addEventListener("change", function () {
-          const text = document.getElementById("textInput").value;
-          const newFormat = this.value;
-
-          // Convert codes to the newly selected format:
-          const converted = convertColorCodesToFormat(text, newFormat);
-          document.getElementById("textInput").value = converted;
-
-          // Then, do the normal logic:
-          if (getSelectedMode() === "edit") {
-            // In edit mode, we want to strip color codes to keep originalText "clean",
-            // then re-apply gradient if user has chosen one
-            originalText = converted.replace(
-            /\$x\d{3}|@x\d{3}|\{x\d{3}|\^\[[F]\d{3}\]|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rKrRgGyYbBmMcCwWdD]|@[rKrRgGyYbBmMcCwWdD]|\{[rKrRgGyYbBmMcCwWdD]|\&[rKrRgGyYbBmMcCwWdD](?:\d{3})?|\&\d{3}/g,
-            ""
-          );
-            applyGradient();
-          } else {
-            // "viewer mode" => just update the output with the newly converted codes
-            updateOutput();
-          }
-        });
-
-      // Gradient definitions (unchanged)
-      const gradients = [
+      // --- Built-in and Custom Gradients ---
+      const builtInGradients = [
         { name: "Rainbow", colors: [196, 208, 226, 46, 51, 87] },
         { name: "Fire", colors: [208, 166, 124, 94, 95, 167] },
         { name: "Ocean", colors: [59, 95, 131, 167, 209, 215] },
@@ -926,9 +860,7 @@ function renderXterm(text) {
         { name: "Moonlit Veil", colors: [220, 221, 227, 228] },
         {
           name: "Gradient_Ex_Sequence_1",
-          colors: [
-            167, 131, 132, 95, 96, 97, 61, 62, 61, 97, 96, 95, 132, 131, 167,
-          ],
+          colors: [167, 131, 132, 95, 96, 97, 61, 62, 61, 97, 96, 95, 132, 131, 167],
         },
         {
           name: "Gradient_Ex_Sequence_2",
@@ -1012,9 +944,7 @@ function renderXterm(text) {
         },
         {
           name: "Gradient_Ex_Sequence_22",
-          colors: [
-            187, 186, 144, 138, 132, 131, 167, 131, 132, 138, 144, 186, 187,
-          ],
+          colors: [187, 186, 144, 138, 132, 131, 167, 131, 132, 138, 144, 186, 187],
         },
         {
           name: "Gradient_Ex_Sequence_23",
@@ -1034,9 +964,7 @@ function renderXterm(text) {
         },
         {
           name: "Gradient Sequence 27",
-          colors: [
-            96, 96, 96, 96, 60, 60, 60, 60, 61, 61, 61, 61, 97, 97, 97, 97,
-          ],
+          colors: [96, 96, 96, 96, 60, 60, 60, 60, 61, 61, 61, 61, 97, 97, 97, 97],
         },
         {
           name: "Gradient Sequence 28",
@@ -1052,9 +980,7 @@ function renderXterm(text) {
         },
         {
           name: "Gradient Sequence 31",
-          colors: [
-            161, 198, 126, 90, 91, 97, 108, 109, 110, 111, 71, 72, 73, 74, 75,
-          ],
+          colors: [161, 198, 126, 90, 91, 97, 108, 109, 110, 111, 71, 72, 73, 74, 75],
         },
         {
           name: "Gradient Sequence 32",
@@ -1084,34 +1010,336 @@ function renderXterm(text) {
         { name: "Lush Meadow", colors: [46, 82, 118, 154, 190] },
         { name: "Midnight Shadows", colors: [16, 22, 28, 34, 40, 46] },
         { name: "Sunset Blaze", colors: [202, 166, 130, 94, 58] },
-        { name: "Wailing Abomination", colors: [166, 172, 130, 136, 94, 100, 58, 64, 106, 112, 142, 148]},
-        { name: "Putrid Funk", colors: [130, 136, 142, 148, 154, 148, 142, 136, 135, 134, 133, 132]}
+        {
+          name: "Wailing Abomination",
+          colors: [166, 172, 130, 136, 94, 100, 58, 64, 106, 112, 142, 148],
+        },
+        {
+          name: "Putrid Funk",
+          colors: [130, 136, 142, 148, 154, 148, 142, 136, 135, 134, 133, 132],
+        }
       ];
+
+      // Load custom gradients from localStorage and merge them.
+      let customGradients = loadCustomGradients();
+      let gradients = builtInGradients.concat(customGradients);
+      let originalText = "";
+
+      function populateGradientSelect() {
+        const select = document.getElementById("gradientSelect");
+        select.innerHTML = "";
+        gradients.forEach((g, idx) => {
+          const option = document.createElement("option");
+          option.value = g.name;
+          option.textContent = g.name;
+          option.dataset.gradientIndex = idx;
+          select.appendChild(option);
+        });
+        createGradientOptionPreviews();
+      }
+
+      function onGradientChange() {
+        updateGradientPreview();
+        applyGradient();
+      }
+
+      function onPatternChange() {
+        applyGradient();
+      }
+
+      function onTextInput() {
+        const mode = getSelectedMode();
+        const text = document.getElementById("textInput").value;
+        if (mode === "edit") {
+          let plain = text.replace(
+            /\$x\d{3}|@x\d{3}|\{x\d{3}|\^\[[F]\d{3}\]|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rKrRgGyYbBmMcCwWdD]|@[rKrRgGyYbBmMcCwWdD]|\{[rKrRgGyYbBmMcCwWdD]|\&[rKrRgGyYbBmMcCwWdD](?:\d{3})?|\&\d{3}/g,
+            ""
+          );
+          originalText = plain;
+          applyGradient();
+        } else {
+          updateOutput();
+        }
+      }
+
+      function getSelectedMode() {
+        const modes = document.getElementsByName("mode");
+        for (const mode of modes) {
+          if (mode.checked) return mode.value;
+        }
+        return "edit";
+      }
+
+      const modeSelectors = document.getElementsByName("mode");
+      modeSelectors.forEach((modeSelector) => {
+        modeSelector.addEventListener("change", () => {
+          if (getSelectedMode() === "view") {
+            document.getElementById("gradientControls").classList.add("disabled");
+          } else {
+            document.getElementById("gradientControls").classList.remove("disabled");
+          }
+          updateOutput();
+        });
+      });
+
+      // Toggle Custom Gradient Section
+      document.getElementById("toggleCustomGradientButton").addEventListener("click", function () {
+        const addGradientDiv = document.getElementById("addGradient");
+        if (addGradientDiv.style.display === "none" || addGradientDiv.style.display === "") {
+          addGradientDiv.style.display = "block";
+          this.value = "Hide custom gradient";
+        } else {
+          addGradientDiv.style.display = "none";
+          this.value = "Create custom gradient";
+        }
+      });
+
+      // Toggle Manage Custom Gradients Section
+      document.getElementById("toggleManageCustomGradients").addEventListener("click", function () {
+        const manageDiv = document.getElementById("manageCustomGradients");
+        if (manageDiv.style.display === "none" || manageDiv.style.display === "") {
+          manageDiv.style.display = "block";
+          this.value = "Hide custom gradients";
+          populateCustomGradientsList();
+        } else {
+          manageDiv.style.display = "none";
+          this.value = "Manage custom gradients";
+        }
+      });
+
+      // Update the preview in the create custom gradient form
+      function updateCustomGradientPreview() {
+        const codesStr = document.getElementById("newGradientCodes").value.trim();
+        if (!codesStr) {
+          document.getElementById("customGradientPreview").style.background = "";
+          return;
+        }
+        const codes = codesStr.split(/\s+/).map(item => parseInt(item, 10));
+        if (codes.some(code => isNaN(code) || code < 0 || code > 255)) {
+          document.getElementById("customGradientPreview").style.background = "";
+          return;
+        }
+        const colors = codes.map(xtermToRgbHex);
+        let backgroundStyle = "";
+        if (colors.length > 1) {
+          backgroundStyle = `linear-gradient(to right, ${colors.join(", ")})`;
+        } else if (colors.length === 1) {
+          backgroundStyle = colors[0];
+        }
+        document.getElementById("customGradientPreview").style.background = backgroundStyle;
+      }
+      document.getElementById("newGradientCodes").addEventListener("input", updateCustomGradientPreview);
+
+      // Remove "invalid" class on input when valid
+      document.getElementById("newGradientName").addEventListener("input", function () {
+        if (this.validity.valid) this.classList.remove("invalid");
+      });
+      document.getElementById("newGradientCodes").addEventListener("input", function () {
+        if (this.validity.valid) this.classList.remove("invalid");
+      });
+
+      // This function adds the gradient and verifies valid color codes.
+      function verifyAndAddGradient() {
+        const gName = document.getElementById("newGradientName").value;
+        const gColors = [];
+        const colorCodes = document.getElementById("newGradientCodes").value.split(" ");
+        const wasConverted = colorCodes.every((item) => {
+          const conversion = parseInt(item);
+          if (!isNaN(conversion) && conversion >= 0 && conversion <= 255) {
+            gColors.push(conversion);
+            return true;
+          } else {
+            return false;
+          }
+        });
+        if (wasConverted) {
+          customGradients.push({
+            name: gName,
+            colors: gColors
+          });
+          saveCustomGradients();
+          gradients = builtInGradients.concat(customGradients);
+          populateGradientSelect();
+          document.getElementById("newGradientName").value = "";
+          document.getElementById("newGradientCodes").value = "";
+          document.getElementById("customGradientPreview").style.background = "";
+        } else {
+          alert("Color codes must be a space separated list of numbers between 0 and 255.");
+        }
+      }
+
+      // Ignore the click if the input isn't valid and trigger shake animation.
+      function addGradientClick() {
+        const nameInput = document.getElementById("newGradientName");
+        const codesInput = document.getElementById("newGradientCodes");
+        if (nameInput.validity.valid && codesInput.validity.valid) {
+          verifyAndAddGradient();
+        } else {
+          if (!nameInput.validity.valid) {
+            nameInput.classList.add("invalid", "shake");
+            nameInput.addEventListener("animationend", () => {
+              nameInput.classList.remove("shake");
+            }, { once: true });
+          }
+          if (!codesInput.validity.valid) {
+            codesInput.classList.add("invalid", "shake");
+            codesInput.addEventListener("animationend", () => {
+              codesInput.classList.remove("shake");
+            }, { once: true });
+          }
+        }
+      }
+      document.getElementById("newGradientProcess").addEventListener("click", addGradientClick);
+
+      // --- Editing Custom Gradients in the Management Section ---
+
+      // Update the preview for an editable custom gradient
+      function updateEditGradientPreview(codesString, previewBox) {
+        const codesArr = codesString.trim().split(/\s+/).map(item => parseInt(item, 10));
+        if (codesArr.some(code => isNaN(code) || code < 0 || code > 255)) {
+          previewBox.style.background = "";
+          return;
+        }
+        const colors = codesArr.map(xtermToRgbHex);
+        let backgroundStyle = "";
+        if (colors.length > 1) {
+          backgroundStyle = `linear-gradient(to right, ${colors.join(", ")})`;
+        } else if (colors.length === 1) {
+          backgroundStyle = colors[0];
+        }
+        previewBox.style.background = backgroundStyle;
+      }
+
+      // Populate the list of custom gradients for management (with inline editing)
+      function populateCustomGradientsList() {
+        const container = document.getElementById("customGradientsList");
+        container.innerHTML = "";
+        if (customGradients.length === 0) {
+          container.innerHTML = "<p>No custom gradients added.</p>";
+          return;
+        }
+        customGradients.forEach((grad, index) => {
+          const gradDiv = document.createElement("div");
+          gradDiv.classList.add("custom-gradient-item");
+
+          // Preview box
+          const previewBox = document.createElement("div");
+          previewBox.classList.add("custom-gradient-preview");
+          // Initially update preview using stored codes
+          updateEditGradientPreview(grad.colors.join(" "), previewBox);
+
+          // Name input
+          const nameInput = document.createElement("input");
+          nameInput.type = "text";
+          nameInput.classList.add("edit-gradient-name");
+          nameInput.value = grad.name;
+
+          // Codes input
+          const codesInput = document.createElement("input");
+          codesInput.type = "text";
+          codesInput.classList.add("edit-gradient-codes");
+          codesInput.value = grad.colors.join(" ");
+          codesInput.addEventListener("input", function() {
+            updateEditGradientPreview(this.value, previewBox);
+          });
+
+          // Save button
+          const saveBtn = document.createElement("button");
+          saveBtn.textContent = "Save";
+          saveBtn.addEventListener("click", function() {
+            saveEditedGradient(index, nameInput, codesInput);
+          });
+
+          // Remove button
+          const removeBtn = document.createElement("button");
+          removeBtn.textContent = "Remove";
+          removeBtn.addEventListener("click", function() {
+            removeCustomGradient(index);
+          });
+
+          gradDiv.appendChild(previewBox);
+          gradDiv.appendChild(nameInput);
+          gradDiv.appendChild(codesInput);
+          gradDiv.appendChild(saveBtn);
+          gradDiv.appendChild(removeBtn);
+
+          container.appendChild(gradDiv);
+        });
+      }
+
+      // Save the edited custom gradient
+      function saveEditedGradient(index, nameInput, codesInput) {
+        const newName = nameInput.value.trim();
+        const codesStr = codesInput.value.trim();
+        if (!newName.match(/^[\w\s]+$/)) {
+          nameInput.classList.add("invalid", "shake");
+          nameInput.addEventListener("animationend", () => {
+            nameInput.classList.remove("shake");
+          }, { once: true });
+          return;
+        }
+        if (!codesStr.match(/^(?:[0-9]{1,3}(?:\s+[0-9]{1,3})*)$/)) {
+          codesInput.classList.add("invalid", "shake");
+          codesInput.addEventListener("animationend", () => {
+            codesInput.classList.remove("shake");
+          }, { once: true });
+          return;
+        }
+        const codesArr = codesStr.split(/\s+/).map(item => parseInt(item, 10));
+        if (codesArr.some(code => isNaN(code) || code < 0 || code > 255)) {
+          codesInput.classList.add("invalid", "shake");
+          codesInput.addEventListener("animationend", () => {
+            codesInput.classList.remove("shake");
+          }, { once: true });
+          return;
+        }
+        customGradients[index].name = newName;
+        customGradients[index].colors = codesArr;
+        saveCustomGradients();
+        gradients = builtInGradients.concat(customGradients);
+        populateGradientSelect();
+        populateCustomGradientsList();
+      }
+
+      // Remove a custom gradient
+      function removeCustomGradient(index) {
+        customGradients.splice(index, 1);
+        saveCustomGradients();
+        gradients = builtInGradients.concat(customGradients);
+        populateGradientSelect();
+        populateCustomGradientsList();
+      }
+
+      // Format conversion event
+      document.getElementById("formatSelector").addEventListener("change", function () {
+        const text = document.getElementById("textInput").value;
+        const newFormat = this.value;
+        const converted = convertColorCodesToFormat(text, newFormat);
+        document.getElementById("textInput").value = converted;
+        if (getSelectedMode() === "edit") {
+          originalText = converted.replace(
+            /\$x\d{3}|@x\d{3}|\{x\d{3}|\^\[[F]\d{3}\]|@\[[F]\d{3}\]|\\t\[[F]\d{3}\]|@n|\$[rKrRgGyYbBmMcCwWdD]|@[rKrRgGyYbBmMcCwWdD]|\{[rKrRgGyYbBmMcCwWdD]|\&[rKrRgGyYbBmMcCwWdD](?:\d{3})?|\&\d{3}/g,
+            ""
+          );
+          applyGradient();
+        } else {
+          updateOutput();
+        }
+      });
 
       function initialize() {
         populateGradientSelect();
         updateGradientPreview();
         updateOutput();
+        // If the create-gradient form already has color codes, update its preview.
+        updateCustomGradientPreview();
       }
 
-      document
-        .getElementById("fontSelector")
-        .addEventListener("change", updateFont);
-      document
-        .getElementById("textInput")
-        .addEventListener("input", onTextInput);
-      document
-        .getElementById("gradientSelect")
-        .addEventListener("change", onGradientChange);
-      document
-        .getElementById("patternSelect")
-        .addEventListener("change", onPatternChange);
-      document
-        .getElementById("invertGradient")
-        .addEventListener("change", onGradientChange);
-      document
-        .getElementById("newGradientProcess")
-        .addEventListener("click", addGradientClick);
+      document.getElementById("fontSelector").addEventListener("change", updateFont);
+      document.getElementById("textInput").addEventListener("input", onTextInput);
+      document.getElementById("gradientSelect").addEventListener("change", onGradientChange);
+      document.getElementById("patternSelect").addEventListener("change", onPatternChange);
+      document.getElementById("invertGradient").addEventListener("change", onGradientChange);
 
       initialize();
     </script>

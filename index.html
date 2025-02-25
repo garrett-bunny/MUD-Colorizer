@@ -181,6 +181,7 @@
           <option value="^[F">Xterm F-colors: ^[FNNN]</option>
           <option value="\t">Xterm Builder F-colors: \t[FNNN]</option>
           <option value="&amp;">Xterm: &amp;NNN</option>
+          <option value="%^">Sundering Shadows %^NNN%^</option>
         </select>
       </div>
       <br />
@@ -497,13 +498,21 @@
             const g = Math.floor(base / 6) % 6;
             const b = base % 6;
             fCode = `F${r}${g}${b}`;
+        } else if (format === "^%") {
+          let fCode = "%^FFF%^";
+          if (colorIndex >= 16 && colorIndex <= 231) {
+            const base = colorIndex - 16;
+            const r = Math.floor(base / 36) % 6;
+            const g = Math.floor(base / 6) % 6;
+            const b = base % 6;
+            fCode = `%^${r}${g}${b}%^`;
           } else {
             const clamped = Math.min(Math.max(colorIndex, 16), 231);
             const base = clamped - 16;
             const r = Math.floor(base / 36) % 6;
             const g = Math.floor(base / 6) % 6;
             const b = base % 6;
-            fCode = `F${r}${g}${b}`;
+            fCode = `%^${r}${g}${b}%^`;
           }
           return `^[${fCode}]`;
         } else if (format === "\\t") {

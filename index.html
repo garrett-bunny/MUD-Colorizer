@@ -498,7 +498,7 @@
             const g = Math.floor(base / 6) % 6;
             const b = base % 6;
             fCode = `F${r}${g}${b}`;
-        } else if (format === `%^`) {
+        } else if (format === "SuS") {
           let fCode = format+"FFF"+format;
           if (colorIndex >= 16 && colorIndex <= 231) {
             const base = colorIndex - 16;
